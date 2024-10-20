@@ -1,3 +1,3 @@
-# Plastic Educator Front End
+# Livepeer Image Helper Front End
 
-This repository contains the code for the web facing pages that are part of the Plastic Educator software pair.
+This repository contains the code for the web facing pages that are part of the Livepeer Image Helper software pair.
