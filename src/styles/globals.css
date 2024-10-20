@@ -1,0 +1,236 @@
+@tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+
+  @layer base {
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 222.2 84% 4.9%;
+
+      --card: 0 0% 100%;
+      --card-foreground: 222.2 84% 4.9%;
+
+      --popover: 0 0% 100%;
+      --popover-foreground: 222.2 84% 4.9%;
+
+      --primary: 222.2 47.4% 11.2%;
+      --primary-foreground: 210 40% 98%;
+
+      --secondary: 210 40% 96.1%;
+      --secondary-foreground: 222.2 47.4% 11.2%;
+
+      --muted: 210 40% 96.1%;
+      --muted-foreground: 215.4 16.3% 46.9%;
+
+      --accent: 210 40% 96.1%;
+      --accent-foreground: 222.2 47.4% 11.2%;
+
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 210 40% 98%;
+
+      --border: 214.3 31.8% 91.4%;
+      --input: 214.3 31.8% 91.4%;
+      --ring: 222.2 84% 4.9%;
+
+      --radius: 0.5rem;
+    }
+
+    .dark {
+      --background: 222.2 84% 4.9%;
+      --foreground: 210 40% 98%;
+
+      --card: 222.2 84% 4.9%;
+      --card-foreground: 210 40% 98%;
+
+      --popover: 222.2 84% 4.9%;
+      --popover-foreground: 210 40% 98%;
+
+      --primary: 210 40% 98%;
+      --primary-foreground: 222.2 47.4% 11.2%;
+
+      --secondary: 217.2 32.6% 17.5%;
+      --secondary-foreground: 210 40% 98%;
+
+      --muted: 217.2 32.6% 17.5%;
+      --muted-foreground: 215 20.2% 65.1%;
+
+      --accent: 217.2 32.6% 17.5%;
+      --accent-foreground: 210 40% 98%;
+
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 210 40% 98%;
+
+      --border: 217.2 32.6% 17.5%;
+      --input: 217.2 32.6% 17.5%;
+      --ring: 212.7 26.8% 83.9%;
+    }
+  }
+
+  @layer base {
+    * {
+      @apply border-border;
+    }
+    body {
+      @apply bg-background text-foreground;
+    }
+  }
+
+/* Make the content align with the top of the page */
+.flex-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;  /* Center horizontally */
+  justify-content: flex-start;  /* Align to top */
+  margin: 0;
+  padding: 0;
+}
+
+h1, p {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* -------------------- BEGIN: LICENSE ASSISTANT CHAT-BOT ------------ */
+
+/* Container for the entire chatbot interaction */
+#chatbot-interaction-container-div {
+  background-color: #f5f5dc; /* Beige background */
+  width: 100%;
+  /* height: 100%; */
+  height: 800px !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title section */
+#title-div {
+  padding: 16px;
+  background-color: #f0e68c; /* Lighter beige */
+  text-align: center;
+}
+
+.chatbot-interaction-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* h2 title styling */
+.chatbot-interaction {
+  color: black;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+  padding: 0;
+}
+
+
+/* Textarea styling */
+#chatbot-explainer-textarea {
+  background-color: aliceblue; /* Antique White */
+  color: black;
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #d2b48c; /* Tan */
+  resize: none;
+  flex-grow: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Textarea styling */
+#chatbot-interaction-textarea {
+  background-color: #faebd7; /* Antique White */
+  color: black;
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #d2b48c; /* Tan */
+  resize: none;
+  flex-grow: 1;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#child-of-title-div {
+  justify-content: space-evenly;
+}
+
+#title-div {
+
+}
+
+#chatbot-floating-interaction-header {
+  font-size: x-large;
+}
+
+/* Prompt input container */
+#prompt-input-container-license-assistant {
+  background-color: darkred; /* Wheat */
+  /* padding: 16px; */
+  /* margin-top: 16px; */
+  border-top: 1px solid #d2b48c; /* Tan */
+}
+
+/* TEXTAREA */
+#prompt-input-textarea-license-assistant {
+  background-color: #3A0000;
+  padding: 7px;
+}
+
+/* Hidden class to toggle visibility */
+.hidden {
+  display: none;
+}
+
+/* -------------------- END  : LICENSE ASSISTANT CHAT-BOT ------------ */
+
+/* -------------------- BEGIN: LICENSE ASSISTANT PROMPT INPUT ------------ */
+
+/* Container for the entire prompt input box */
+#prompt-input-box-div {
+  display: flex;
+  padding: 10px;
+  flex-direction: row; /* Horizontal layout */
+  width: 100%;
+  align-items: center; /* Vertically align label, textarea, and button */
+  justify-content: space-between; /* Distribute elements with spacing */
+  background-color: darkred;
+}
+
+/* Style for the label on the left */
+#prompt-input-box-label {
+  width: 20%; /* Takes up 10% of the available width */
+  margin-right: 10px; /* Space between label and textarea */
+  color: white;
+}
+
+/* Style for the textarea in the middle */
+.prompt-input-box-textarea {
+  background-color:  #3A0000; /* Wheat */
+  border-top: 1px solid #d2b48c; /* Tan */  width: 80%; /* Takes up 80% of the available width */
+  /* height: 100px; */
+  margin-top: 10px;
+  padding: 10px;
+  width: 100%;
+  color: white;
+  box-sizing: border-box; /* Includes padding in width/height calculation */
+}
+
+/* Style for the submit button on the right */
+#prompt-input-box-button {
+  background-color: #bdee63;
+  color: black;
+  width: 5%; /* Takes up 10% of the available width */
+  margin-left: 10px; /* Space between textarea and button */
+}
+
+#state-text-license-explained {
+  white-space: normal !important;
+}
+
+#state-text-chatbot-interaction-floating {
+  color: rgb(201 39 37) !important;
+}
+
+/* -------------------- END  : LICENSE ASSISTANT PROMPT INPUT ------------ */

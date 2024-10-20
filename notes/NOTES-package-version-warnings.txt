@@ -1,0 +1,7 @@
+The latest versions of the "next" NPM package has significant errors with websockets.  When we used it, the client kept closing the connection before it could be established.  Until they fix these problems, stick with version:
+
+ "next": "^13.4.12",
+
+Also, it may be necessary to downgrade eslint to 8.x and synchronize the plugin versions.
+
+Also, make sure ".eslintrc.cjs" is not in the tsconfig.json "include" section and make sure it is in the "exclude" section.  Otherwise, npm run build will halt with a fatal error.

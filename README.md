@@ -1,2 +1,2 @@
-# plastic-educator-front-end
-This is the front-end web facing side of the Plastic Educator software pair
+# my-livepeer-lab
+Private repo of storytime front-end for experimentation.

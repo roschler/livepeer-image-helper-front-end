@@ -1,0 +1,49 @@
+TODO NOTES
+
+DEPLOYMENT:
+
+    - Remember to change ALB path entry from /storytime to /chatbot !
+
+NEXT:
+
+    STORY PROTOCOL:
+
+        - Need retry image request code, up to 3x, when a 503 error occurs
+
+        - If time, try Jacob's API call to see if an asset is ready
+         before opening the explorer page
+
+        - Rejecting the mint and register transaction seems to hang
+          the app.
+
+        ? Chrome is blocking Twitter share popup.
+
+        + Double-click on image shows "details pane".  Need to
+          create hideable details pane and code to service the
+          double-click event.
+
+BUGS
+
+- When the socket reconnects, get rid of the frowny face emoji
+- Put the spinner underneath the status text.
+
+- Modify back-end to convert PNGs to WEBPs when but AFTER
+   we are ready to submit our contest entry!
+
+- Everything works except for the images.  They are being
+  generated on the server side, but the URL passed back
+  is broken because it appears the storytime client
+  renders the images by crafting a request URL through
+  a route named "https://plasticeducator.com/nft-supreme/_next/image"
+  and either we don't have it, or we broke the flow
+  and need to fix it when making the client a pure
+  client side static app.
+
+  https://plasticeducator.com/nft-supreme/_next/image?url=https%3A%2F%2Fobj-store.livepeer.cloud%2Flivepeer-cloud-ai-images%2F41d84231%2F19381f01.png&w=640&q=75
+
+SECURITY
+
+- Need to add true server side session object.  Currently,
+ that has been replaced with a dummy function that returns
+ a static object to make the ReaderViewport component
+ happy.  We will be using a wallet for our authorization.
