@@ -1,6 +1,19 @@
 import {EnumClientUserMessages} from "@/client-constants/client-user-messages";
-import {UserBlockchainPresence} from "@/app/components/blockchain/user-blockchain-presence";
 import {Hex} from "viem";
+
+// -------------------- BEGIN: IMAGE PROCESSING MODES ------------
+
+// This enum holds the known image processing modes.
+export enum EnumImageProcessingModes {
+	// User wants a new image.
+	"NEW" = "new",
+	// Fix problems with an images content.
+	"REFINE" = "refine",
+	// Enhance an image to make it more interesting.
+	"ENHANCE" = "enhance"
+}
+
+// -------------------- END  : IMAGE PROCESSING MODES ------------
 
 // We use this type to cover all the plain JSON objects
 //  we receive from the back-end object.

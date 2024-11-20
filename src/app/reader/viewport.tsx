@@ -4,19 +4,19 @@ import { PropsWithChildren, useRef } from "react";
 import React, { useState, useEffect } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 import {
+	EnumImageProcessingModes,
 	JsonObjectAndTypeResponseObject, LicenseAssistantNuevoResponse,
 	LicenseAssistantRequest,
-	LicenseTermsLlmJsonResponse,
 	MintNftImageDetails,
 	MintNftRequest, OperationResultPayload,
 	ShareImageOnTwitterPayload, StoreUserBlockchainPresenceRequest,
-	storyGenres, StringifiedJsonObject, StringifiedJsonResponseObject,
+	storyGenres, StringifiedJsonObject,
 	TwitterCardDetails
 } from "@/app/reader/types";
 import ReaderToolbar, {ReaderToolbarHandle} from "@/app/components/toolbar/toolbar";
 import PromptInput from "@/app/components/prompt-input";
 import ImageViewer from "@/app/components/image-viewer";
-import { Badge, Callout, Spinner } from "@radix-ui/themes";
+import { Badge, Callout } from "@radix-ui/themes";
 import type {
 	ServerMessage,
 	StatePayload,
@@ -35,8 +35,11 @@ import {EnumChainIds} from "@/app/components/blockchain/blockchain-common";
 
 import {showAllBigintFieldNames} from "@/common/common-routines";
 import ChatbotInteractionFloating, {ChatbotInteractionFloatingRef} from "@/app/components/chatbot-interaction-floating";
+import EnhancedSpinner, { EnhancedSpinnerRef } from "@/app/components/enhanced-spinner";
 
-export type ISODateString = string;
+// How often we want the spinner elapsed time in seconds
+//  DIV to update.
+const SPINNER_INTERVAL_SECONDS = 1;
 
 // -------------------- BEGIN: CHATBOT NAMES ------------
 
@@ -90,6 +93,13 @@ const genreList = storyGenres;
 
 export default function ReaderViewport(props: ReaderViewportProps) {
 
+	const spinnerRef = useRef<EnhancedSpinnerRef>(null);
+
+	// Reset the enhanced spinner to 0 seconds.
+	const resetSpinner = () => {
+		spinnerRef.current?.resetSpinner();
+	};
+
 	// -------------------- BEGIN: PROMISE RESOLVERS ------------
 
 	// These are the promise resolvers we use as part of
@@ -139,7 +149,7 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 	// State variable for chatbotName
 	const [chatbotName, setChatbotName] =
 		useState<EnumChatbotNames>(EnumChatbotNames.IMAGE_ASSISTANT);
-		// useState<string>(EnumChatbotNames.LICENSE_ASSISTANT);
+	// useState<string>(EnumChatbotNames.LICENSE_ASSISTANT);
 
 	// Create reference objects to access the methods the ChatbotInteraction
 	//  component exposes.
@@ -161,6 +171,19 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 	// session.
 	const bIsNewLicenseSession = useRef(true);
 
+	// Make sure the user has not entered anything into the PromptInput
+	//  box, before setting it to the default prompt.  This is to
+	//  stop error events from overwriting the user's input.
+	const initialPromptSet = useRef(false); // Track if the initial default prompt has been set
+
+	// Set the initial prompt once on mount
+	useEffect(() => {
+		if (!initialPromptSet.current) {
+			setPrompt(defaultPrompt);
+			initialPromptSet.current = true; // Mark initial prompt as set
+		}
+	}, []);
+
 	/**
 	 * This function shows/hides the license assistant component.
 	 *
@@ -168,7 +191,7 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 	 */
 	const setLicenseAssistantVisibility = (bIsVisible: boolean) => {
 		if (cbLicenseAssistantRef.current) {
-			 cbLicenseAssistantRef.current.setVisibility(bIsVisible);
+			cbLicenseAssistantRef.current.setVisibility(bIsVisible);
 		}
 	}
 
@@ -381,7 +404,10 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 				console.log("Connection closed");
 				console.log(`Code: ${closeEvent.code}, Reason: ${closeEvent.reason}, Clean: ${closeEvent.wasClean}`);
 				setConnectionEstablished(false);
+
+				console.info(CONSOLE_CATEGORY, `SOCKET CLOSED.  Setting isStreaming to: FALSE `);
 				setIsStreaming(false);
+
 				setErrorMessage(`Disconnected: ${closeEvent.reason}`);
 			},
 			onError: (error) => {
@@ -433,27 +459,30 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 
 	const onGenreChange = (genre: string) => {
 		setGenre(genre);
-		if (userHasTyped) return;
+		if (userHasTyped)
+			// Don't overwrite user input with genre prompt.
+			return;
+
 		setPrompt(
 			defaultPrompts[genre as keyof typeof storyGenres].replace("%user%", user)
 		);
 	};
 
 	/**
-	 * This is the function that does a chat volley
-	 *  with the image assistant.
-	 *
-	 * @param genre - The currently selected genre
-	 *  in the toolbar. (not used)
+	 * This is the function that makes the actual image
+	 *  request to our server.
 	 */
-	const onGenreSelect = (genre: string) => {
-		// No nested calls.
-		if (isStreaming)
-			return;
+	const doTheImageRequest = (imageProcessingMode: string) => {
+		setShowCarousel(false);
+
+		console.info(CONSOLE_CATEGORY, `doTheImageRequest for image processing mode("${imageProcessingMode}").  Setting isStreaming to: TRUE `);
+
+		// Reset the spinner's seconds display.
+		resetSpinner();
+		// Set the busy flag.
+		setIsStreaming(true);
 
 		setStory("");
-		setShowCarousel(false);
-		setIsStreaming(true);
 
 		const userId = getOrCreateAnonymousId();
 
@@ -463,26 +492,40 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 			type: "request_image_assistant",
 			payload: {
 				user_id: userId,
-				prompt,
+				prompt: prompt,
+				image_processing_mode: imageProcessingMode,
+				url_to_active_image_in_client: activeImageUrl
 			},
 		});
+	}
+
+	/**
+	 * This function is not currently used.
+	 */
+	const onGenreSelect = (genre: string) => {
+		// No nested calls.
+		if (isStreaming)
+			return;
+
+		doTheImageRequest(EnumImageProcessingModes.REFINE);
 	};
 
+	/**
+	 * This function is called when the user
+	 *  hits the ENTER key in the prompt input box
+	 *
+	 * @param userInput - The text the user entered.
+	 */
 	const doMakeImage = (userInput: string) => {
-		if (isStreaming) return;
+		if (isStreaming)
+			return;
 
 		setPrompt(userInput);
-		setStory("");
-		setIsStreaming(true);
 
-		const userId = getOrCreateAnonymousId();
-		sendJsonMessage({
-			type: "request_image_assistant",
-			payload: {
-				user_id: userId,
-				prompt: userInput,
-			},
-		});
+		// The default image processing mode for when the user
+		//  hits the ENTER key in the prompt input box is
+		//  "enhance".
+		doTheImageRequest(EnumImageProcessingModes.ENHANCE);
 	};
 
 	/**
@@ -578,6 +621,33 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 	}
 
 	/**
+	 * This function is called from the ReaderToolbar
+	 *  when the user clicks on the refine image
+	 *  button.  The back-end server will analyze the
+	 *  latest image compared to the last prompt generated
+	 *  and return to us a response with suggested feedback
+	 *  text to be used on behalf of the user as feedback
+	 *  to the current image.
+	 */
+	const doProcessImage = (imageProcessingMode: EnumImageProcessingModes) => {
+		console.info(CONSOLE_CATEGORY, `Requesting image processing.  Mode("${imageProcessingMode}").\n Image URL: ${activeImageUrl}`);
+
+		if (imageProcessingMode === EnumImageProcessingModes.NEW) {
+			// Send a request to the server to refine this image.
+			doTheImageRequest(imageProcessingMode);
+		} else {
+			// For all the other image processing modes other
+			//  than starting a new image, we ignore a call
+			//  to process an image until an image has been
+			//  generated.
+			if (activeImageUrl.length > 0) {
+				// Send a request to the server to refine this image.
+				doTheImageRequest(imageProcessingMode);
+			}
+		}
+	}
+
+	/**
 	 * This function makes the request to the back-end server for the
 	 *  image details we need to mint an NFT.  It is awaitable.
 	 */
@@ -606,6 +676,20 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 		return new Promise((resolve, reject) => {
 			mintNftImageDetailsResolver.current = resolve;
 		});
+	}
+
+	/**
+	 * This function is called when the user has pressed the
+	 *  back button on the license assistant form
+	 *  to cancel the license terms session.
+	 *
+	 * NOTE: This function, as opposed to the
+	 *  Twitter share function, does most of its
+	 *  work on the client side.
+	 */
+	const doHandleBackButtonClick = async()  => {
+		// Hide the license assistant.
+		setLicenseAssistantVisibility(false);
 	}
 
 	/**
@@ -713,14 +797,22 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 				// Tell Story Protocol to create a new SPG NFT collection and wait
 				//  for the response.
 
+				console.info(CONSOLE_CATEGORY, `CREATING SPG NFT COLLECTION.  Setting isStreaming to: TRUE`);
+
+				// Reset the spinner's seconds display.
+				resetSpinner();
+
+				// Set the busy flag.
 				setIsStreaming(true)
 
 				// Create a new SPG NFT collection.
 				const bIsSuccess =
 					await useUserBlockchainPresenceObj.createSpgNftCollection(
-					'Livepeer Image Helper',
-					'LIH'
-				)
+						'Livepeer Image Helper',
+						'LIH'
+					)
+
+				console.info(CONSOLE_CATEGORY, `SPG NFT COLLECTION CREATED.  Setting isStreaming to: FALSE`);
 
 				setIsStreaming(false)
 
@@ -730,7 +822,7 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 
 				// Tell the back-end server to immediately update its
 				//  image of the user's blockchain presence object.
-				 const bIsUpdateSuccessful =
+				const bIsUpdateSuccessful =
 					await requestStoreUserBlockchainPresenceObject(
 						useUserBlockchainPresenceObj)
 
@@ -754,7 +846,14 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 			setStateText(`Minting NFT and registering it on the Story Protocol network.`)
 
 			// Call the method that mints and registers the NFT.
-			setIsStreaming(true)
+
+			console.info(CONSOLE_CATEGORY, `MINTING NFT.  Setting isStreaming to: TRUE`);
+
+			// Reset the spinner's seconds display.
+			resetSpinner();
+
+			// Set the busy flag.
+			setIsStreaming(true);
 
 			if (!licenseResponseObj)
 				throw new Error(`The licenseResponseObj variable is unassigned.`);
@@ -767,6 +866,8 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 			// Recover the user blockchain presence object.
 			const userBlockchainPresenceObj_after_mint =
 				UserBlockchainPresence.fromJsonString(imageDetailsForNftMinting.user_blockchain_presence_stringified)
+
+			console.info(CONSOLE_CATEGORY, `NFT MINTED.  Setting isStreaming to: FALSE`);
 
 			setIsStreaming(false)
 
@@ -783,9 +884,18 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 
 			// Open the explorer page in 30 seconds, to give the explorer
 			//  website time to process our new NFT.
-			setIsStreaming(true)
+
+			console.info(CONSOLE_CATEGORY, `OPENING EXPLORER PAGE.  Setting isStreaming to: TRUE`);
+
+			// Reset the spinner's seconds display.
+			resetSpinner();
+
+			// Set the busy flag.
+			setIsStreaming(true);
 
 			setTimeout(() => {
+					console.info(CONSOLE_CATEGORY, `EXPLORER PAGE TIME-OUT .  Setting isStreaming to: FALSE`);
+
 					setIsStreaming(false)
 
 					// Open the page now.
@@ -833,8 +943,8 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 	 *  user changes the active image in the image carousel.
 	 */
 	const doActiveImageChange = (
-			imageUrlOfActiveImage: string,
-			dimensions:
+		imageUrlOfActiveImage: string,
+		dimensions:
 			{
 				width: number,
 				height: number
@@ -887,18 +997,18 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 		//  share intent server to our GET URL for Twitter card
 		//  metadata.
 
-        // Encode the tweet text (postText) separately from the URL
-        const textParam = `text=${encodeURIComponent(tweet_text)}`;
+		// Encode the tweet text (postText) separately from the URL
+		const textParam = `text=${encodeURIComponent(tweet_text)}`;
 
-        // Validate, trim, and encode hashtags (comma-separated)
-        const hashtagsParam = hash_tags_array.length > 0
-            ? `&hashtags=${encodeURIComponent(
+		// Validate, trim, and encode hashtags (comma-separated)
+		const hashtagsParam = hash_tags_array.length > 0
+			? `&hashtags=${encodeURIComponent(
 				hash_tags_array
-                    .map(tag => tag.trim())  // Trim each hashtag
-                    .filter(tag => tag.length > 0)  // Filter out empty strings
-                    .join(',')
-            )}`
-            : '';
+					.map(tag => tag.trim())  // Trim each hashtag
+					.filter(tag => tag.length > 0)  // Filter out empty strings
+					.join(',')
+			)}`
+			: '';
 
 		// Include the twitterCardUrl as the URL query parameter (Twitter will use this to fetch metadata)
 		// const urlParam = `&url=${twitter_card_url}`;
@@ -988,8 +1098,15 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 	 */
 	useEffect(() => {
 		if (lastMessage !== null) {
-			if (typeof lastMessage.data !== "string") return;
+			if (typeof lastMessage.data !== "string")
+				return;
+
 			const data = JSON.parse(lastMessage.data) as ServerMessage;
+
+			// We use the receipt of a new message
+			//  as a convenient time to clear any error message
+			//  displaying.
+			setErrorMessage('');
 
 			if (data.type === "json_response_object_stringified") {
 				// -------------------- BEGIN: STRINGIFIED JSON RESPONSE OBJECTS FROM THE BACK-END SERVER ------------
@@ -1041,9 +1158,9 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 			else if (data.type === "state") {
 				const payload = data.payload as StatePayload;
 
-				// If the streaming text flag is set, then show
-				//  the spinner.
-				setIsStreaming(payload.streaming_text)
+				// console.info(CONSOLE_CATEGORY, `STATE CHANGE MESSAGE RECEIVED.  Setting isStreaming to: TRUE`);
+
+				// setIsStreaming(payload.streaming_text)
 
 				setStateText(payload.state_change_message);
 			}
@@ -1051,9 +1168,13 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 				const payload = data.payload as ImagePayload;
 				if (payload.urls.length > 0) {
 					setShowCarousel(true);
+
+					setImages(payload);
+
+					console.info(CONSOLE_CATEGORY, `IMAGES RECEIVED.  Setting isStreaming to: FALSE`);
+
+					setIsStreaming(false);
 				}
-				setImages(payload);
-				setIsStreaming(false);
 			}
 			else if (data.type === "share_image_on_twitter") {
 				const payload = data.payload as ShareImageOnTwitterPayload;
@@ -1143,9 +1264,16 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 				// -------------------- END  : RESPONSE STORE USER BLOCKCHAIN PRESENCE ------------
 			} else if (data.type === "error") {
 				const payload = data.payload as ErrorPayload;
+
+				console.info(CONSOLE_CATEGORY, `ERROR RESPONSE FROM SERVER.  Setting isStreaming to: FALSE`);
+
 				setIsStreaming(false);
-				setPrompt(defaultPrompt);
-				setUserHasTyped(false);
+
+				// Don't overwrite the user's input if an error
+				//  occurs.
+				// setPrompt(defaultPrompt);
+				// setUserHasTyped(false);
+
 				setErrorMessage(payload.error ?? "An unknown error occurred.");
 				clearError();
 			} else {
@@ -1167,16 +1295,18 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 
 	return (
 		<div className="flex-container flex h-max flex-col items-center">
-			<ReaderToolbar disabled={false} onGenreChange={onGenreChange} onGenreSelect={onGenreSelect} doShareImageOnTwitter={doShareImageOnTwitter} doMintTokenOnStoryProtocol={doLicenseAssistantBeforeMinting} />
+			<ReaderToolbar disabled={false} onGenreChange={onGenreChange} onGenreSelect={onGenreSelect} onProcessImage={doProcessImage} doShareImageOnTwitter={doShareImageOnTwitter} doMintTokenOnStoryProtocol={doLicenseAssistantBeforeMinting} />
 			<div
 				className="my-2 flex w-max grid-cols-[1fr_1fr] items-center justify-center gap-2 text-center sm:w-screen">
 				<div className="flex w-48">
 					<Badge color={badgeColor()}>SOCKET: {connectionStatus}</Badge>
 				</div>
+				{/*
 				<div className="flex w-48">
 					<Badge color="teal"
 						   className="sm:opacity-0">GENRE: {genreList[genre as keyof typeof genreList]}</Badge>
 				</div>
+				*/}
 			</div>
 			<div className={errorMessage ? "opacity-90" : "opacity-0"}>
 				<Callout.Root size="1" color="yellow">
@@ -1191,11 +1321,11 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 				{stateText}
 			</div>
 			<div className={`grid items-center justify-center ${isStreaming ? "opacity-90" : "opacity-0"}`}>
-				<Spinner size="3" className="mt-3"/>
+				<EnhancedSpinner ref={spinnerRef} isStreaming={isStreaming} updateIntervalSecs={SPINNER_INTERVAL_SECONDS} spinnerSize={"3"} spinnerClasses="mt-3"/>
 			</div>
 
 			<div className="w-max flex flex-col items-center justify-start">
-					<ChatbotInteractionFloating ref={cbLicenseAssistantRef} titleText={'Story Protocol License Assistant'}  onTakeAction={onLicenseAssistantTakeAction} handleStoryProtocolClick={doMintTokenOnStoryProtocol}  stateText={stateText} isStreaming={isStreaming}  />
+				<ChatbotInteractionFloating ref={cbLicenseAssistantRef} titleText={'Story Protocol License Assistant'}  onTakeAction={onLicenseAssistantTakeAction} handleStoryProtocolClick={doMintTokenOnStoryProtocol} handleBackButtonClick={doHandleBackButtonClick}  stateText={stateText} isStreaming={isStreaming}  />
 			</div>
 
 			<div className="w-max flex flex-col items-center justify-start">
