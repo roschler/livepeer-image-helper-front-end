@@ -1024,7 +1024,7 @@ export default function ReaderViewport(props: ReaderViewportProps) {
 
 		// Add a line break (%0A) before the URL
 		// const fullShareUrl = `${twitterShareBaseUrl}?text=${tweetText}&hashtags=${hashtags}%0A%0A${urlParam}%0A`;
-		const fullShareUrl = `${twitterShareBaseUrl}?text=${tweetText}%0A-- Made with @Livepeer Image Helper%0A${urlParam}%0A`;
+		const fullShareUrl = `${twitterShareBaseUrl}?text=${tweetText}%0A-- Powered by @SambaNovaAI and @Livepeer %0A${urlParam}%0A`;
 
 		console.info(CONSOLE_CATEGORY, `Full Twitter share URL built:\n${fullShareUrl}`)
 
